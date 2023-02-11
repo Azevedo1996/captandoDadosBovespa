@@ -1,0 +1,58 @@
+import yfinance as yf
+import pandas as pd
+from sklearn.linear_model import LinearRegression
+import streamlit as st
+
+# Função para capturar dados da Bovespa
+def get_data(ticker):
+    # Captura os dados da ação desejada
+    data = yf.download(ticker, start="2010-01-01", end="2023-01-01")
+    
+    # Seleciona apenas as colunas Close e Adj Close
+    data = data[["Close", "Adj Close"]]
+    
+    # Renomeia as colunas para um nome mais claro
+    data.rename(columns={"Close": "Close Price", "Adj Close": "Adj Close Price"}, inplace=True)
+    
+    return data
+
+# Função para fazer a previsão de preços de ações
+def predict_price(data, days_ahead):
+    # Cria uma coluna com o número de dias desde o primeiro dia de registro
+    data["Days Since"] = range(len(data))
+    
+    # Seleciona as colunas Close Price e Days Since como variáveis independentes
+    X = data[["Days Since"]].values
+    y = data[["Close Price"]].values
+    
+    # Cria o modelo de regressão linear
+    model = LinearRegression()
+    model.fit(X, y)
+    
+    # Cria uma coluna com a previsão dos preços de ações
+    data["Prediction"] = model.predict(X)
+    
+    # Cria uma coluna com a quantidade de dias desde o último dia de registro
+    data["Days Ahead"] = range(len(data), len(data) + days_ahead)
+    
+    # Preve os preços de ações para os dias futuros desejados
+    prediction = model.predict(data[["Days Ahead"]].values)
+    
+    return prediction
+
+# Função que exibe os dados e previsões na interface do Streamlit
+def show_data_and_prediction(data, prediction):
+    st.write("Dados da ação:")
+    st.write(data)
+    
+    st.write("Previsão dos preços de ações:")
+    st.write(prediction)
+
+# Código principal
+if __name__ == "__main__":
+    # Título da página
+    st.title("Previsão de preços de ações na Bovespa")
+    
+    # Entrada do usuário para o símbolo da ação
+    ticker = st.text_input("Insira o símbolo da ação:", "^BVSP")
+    
